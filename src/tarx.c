@@ -7,12 +7,12 @@ int main(int argc,char **argv)
     if(argc==2)
     {
         char *p=0;
-        if(strstr(argc[1],".tar.gz"!=0)
+        if(strstr(argv[1],".tar.gz")!=0)
         {
             sprintf(p,"tar -zxvf %s",argv[1]);
             system(p);
         }
-        else if (strstr(argc[1],".tar.bz2"!=0)
+        else if (strstr(argv[1],".tar.bz2")!=0)
         {
             sprintf(p,"tar -jxvf %s",argv[1]);
             system(p);
