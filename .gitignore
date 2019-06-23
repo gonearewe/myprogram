@@ -52,6 +52,6 @@ Mkfile.old
 dkms.conf
 src/stdheader.h
 src/stdheader.h
-bin/
-sbin/
-.vscode/
+/bin/
+/sbin/
+/.vscode/
