@@ -1,0 +1,9 @@
+{
+		"logfile_addr":	"/var/opt/myprogram/del.log",
+		"trashbin_addr":"/tmp/trash"
+		
+
+
+
+
+}
