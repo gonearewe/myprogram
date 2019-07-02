@@ -6,37 +6,65 @@
 #include <pwd.h>
 using namespace std;
 char *CreateLogHead(void);
-char *GetTime(void);
 class MyLog
 {
-private:
-    string current_time;
-    string loghead;
-
-public:
-    MyLog()
-    {
-        UpdateLogHead();
-    }
-    void UpdateLogHead()
+    string time, name, abs_filepath, file_basename, cmd,logfile_addr;
+    char *GetTime(void)
     {
         timespec time;
         tm nowtime;
-        char buf[32] = {0};
-        char tmp[64] = {0};
-        char head[128] = {0};
+        static char current_time[32] = {0};
         clock_gettime(CLOCK_REALTIME, &time);
         localtime_r(&time.tv_sec, &nowtime);
+        sprintf(current_time, "%04d-%02d-%02d %02d:%02d:%02d", nowtime.tm_year + 1900,
+         nowtime.tm_mon, nowtime.tm_mday, nowtime.tm_hour, nowtime.tm_min, nowtime.tm_sec);
+        return current_time;
+    }
 
-        sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d", nowtime.tm_year + 1900,
-                nowtime.tm_mon, nowtime.tm_mday, nowtime.tm_hour, nowtime.tm_min, nowtime.tm_sec);
+public:
+    MyLog(string logfile_addr, string file_addr,string command)
+    {
+       
 
-        sprintf(head, "(%s) [%s : %s]", GetTime(), getlogin(), getcwd(tmp, 32));
+       
+        char abs_filepath[128] = {0};
+        struct passwd *ps;
+        ps = getpwuid(getuid());
 
-        current_time = buf;
-        loghead = head;
+        time = GetTime();
+        name=ps->pw_name;
+        realpath(file_addr.c_str(), abs_filepath);
+        file_basename=basename(file_addr.c_str());
+        cmd =command;
+        logfile_addr=logfile_addr;
+    }
+    bool CreateLog()
+      {  
+           cJSON *root;
+        char *out;
+         FILE *fp = fopen(logfile_addr.c_str(), "a+");
+         if(!fp) return false;
+        root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root, "date and time",time.c_str());
+        cJSON_AddStringToObject(root, "login name",name.c_str());
+        cJSON_AddStringToObject(root, "file original path", abs_filepath.c_str());
+        cJSON_AddStringToObject(root, "filename",file_basename.c_str() );
+        cJSON_AddStringToObject(root, "command", cmd.c_str());
+
+        out = cJSON_Print(root);
+        fprintf(fp, out);
+        fclose(fp);
+
+        cJSON_Delete(root);
+        free(out);
+
+        out = NULL;
+        root = NULL;
+        return true;
     }
 };
+
+
 void CreateJsonFile(char *option1, char *option2);
 cJSON *GetJsonObject(char *filepath, cJSON *json);
 void UsageHint();
@@ -65,46 +93,18 @@ int main(int argc, char **argv)
     else if (argc == 2)
     {
         char command_buf[128] = {0};
-        char abs_filepath[128]={0};
-        char* file_basename;
+        char abs_filepath[128] = {0};
+        char *file_basename;
         if (getgid() == 0)
             sprintf(command_buf, "sudo mv %s %s", argv[1], trashbin_addr);
         else
             sprintf(command_buf, "mv %s %s", argv[1], trashbin_addr);
-        if(realpath(argv[1],abs_filepath))
+        if (realpath(argv[1], abs_filepath))
             return -1;
-        file_basename=basename(argv[1]);
+        file_basename = basename(argv[1]);
         system(command_buf);
 
-
-
-    UpdateLogFile:
-    {
-        cJSON *root;
-        char *out;
-        
-        FILE *fp = fopen(logfile_addr.c_str(), "a+");
-        root = cJSON_CreateObject();
-
-        struct passwd *ps;
-        ps = getpwuid(getuid());
-
-        cJSON_AddStringToObject(root, "date and time", GetTime());
-        cJSON_AddStringToObject(root, "login name", ps->pw_name);
-        cJSON_AddStringToObject(root, "file original path",abs_filepath);
-        cJSON_AddStringToObject(root, "filename",file_basename);
-        cJSON_AddStringToObject(root, "command",command_buf);
-
-        out = cJSON_Print(root);
-        fprintf(fp, out);
-        fclose(fp);
-
-        cJSON_Delete(root);
-        free(out);
-
-        out = NULL;
-        root = NULL;
-    }
+   
     }
     else if (argc == 3 && argv[1] == "-r")
     {
@@ -115,24 +115,7 @@ int main(int argc, char **argv)
 
     return 0;
 }
-char *CreateLogHead(void)
-{
-    static char head[128] = {0};
-    char buf[64] = {0};
-    sprintf(head, "(%s) [%s : %s]", GetTime(), getlogin(), getcwd(buf, 32));
-    head[127] = 0;
-    return head;
-}
-char *GetTime(void)
-{
-    timespec time;
-    tm nowtime;
-    static char current_time[32] = {0};
-    clock_gettime(CLOCK_REALTIME, &time);
-    localtime_r(&time.tv_sec, &nowtime);
-    sprintf(current_time, "%04d-%02d-%02d %02d:%02d:%02d", nowtime.tm_year + 1900, nowtime.tm_mon, nowtime.tm_mday, nowtime.tm_hour, nowtime.tm_min, nowtime.tm_sec);
-    return current_time;
-}
+
 int create_js(void)
 {
     cJSON *root;
